@@ -13,18 +13,21 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Install system dependencies (Required for Buildozer/Python-for-Android)
+      - name: Install system dependencies
         run: |
           sudo apt update
           sudo apt install -y git zip unzip openjdk-17-jdk python3-pip \
               build-essential autoconf libtool pkg-config zlib1g-dev \
               libncurses6 libncurses-dev libtinfo6 libffi-dev libssl-dev \
-              python3-dev
+              libgl1-mesa-dev libgles2-mesa-dev \
+              libgstreamer1.0-dev gstreamer1.0-plugins-base \
+              gstreamer1.0-plugins-good ffmpeg python3-dev
 
-      - name: Install Buildozer and core tools
+      - name: Install Python tools
         run: |
-          python3 -m pip install --upgrade pip
-          python3 -m pip install --user buildozer Cython==0.29.36 virtualenv
+          python3 -m pip install --upgrade pip wheel setuptools
+          python3 -m pip install --user virtualenv
+          python3 -m pip install --user buildozer Cython==0.29.36 kivy==2.2.1 plyer
           echo "$HOME/.local/bin" >> $GITHUB_PATH
 
       - name: Install Android SDK
@@ -36,13 +39,8 @@ jobs:
           yes | ./cmdline-tools/bin/sdkmanager --sdk_root=$HOME/.buildozer/android/platform/android-sdk \
             "platform-tools" "build-tools;34.0.0" "platforms;android-34"
 
-      - name: Verify Buildozer installation
+      - name: Verify buildozer
         run: buildozer --version
-
-      - name: Install prebuilt Kivy and dependencies
-        run: |
-          python3 -m pip install --user kivy[base]==2.2.1 --pre --extra-index-url https://kivy.org/downloads/simple/
-          python3 -m pip install --user plyer
 
       - name: Build APK
         env:
@@ -50,9 +48,8 @@ jobs:
         run: |
           buildozer -v android debug
 
-      - name: Upload APK Artifact
+      - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: formula-warrior-apk
           path: bin/*.apk
-          retention-days: 7
