@@ -8,6 +8,7 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -17,7 +18,7 @@ jobs:
           sudo apt update
           sudo apt install -y git zip unzip openjdk-17-jdk python3-pip \
               build-essential autoconf libtool pkg-config zlib1g-dev \
-              libncurses6 libncurses-dev libncursesw6-dev libtinfo6 \
+              libncurses6 libncurses-dev libtinfo6 \
               libffi-dev libssl-dev
 
       - name: Install Python packages
