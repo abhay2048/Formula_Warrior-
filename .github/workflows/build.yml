@@ -69,12 +69,11 @@ jobs:
           path: build_logs/buildozer.log
           retention-days: 7
 
-      - name: Upload APK artifact
+      - name: Upload APK artifact (search all possible locations)
         uses: actions/upload-artifact@v4
         with:
           name: formula-warrior-apk
           path: |
-            .buildozer/android/platform/build-*/bin/*.apk
-            .buildozer/android/platform/build-*/outputs/apk/debug/*.apk
+            .buildozer/android/platform/build-*/bin/**/*.apk
+            .buildozer/android/platform/build-*/outputs/**/*.apk
           retention-days: 7
-
