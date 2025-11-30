@@ -13,7 +13,7 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Install System Dependencies
+      - name: Install system dependencies
         run: |
           sudo apt update
           sudo apt install -y git zip unzip openjdk-17-jdk python3-pip \
@@ -21,27 +21,25 @@ jobs:
               libncurses6 libncurses-dev libtinfo6 libffi-dev libssl-dev \
               python3-dev
 
-      - name: Install Buildozer and Core Tools
+      - name: Install Buildozer and core Python tools
         run: |
           python3 -m pip install --upgrade pip
           python3 -m pip install --user buildozer Cython==0.29.36 virtualenv
           echo "$HOME/.local/bin" >> $GITHUB_PATH
 
-      - name: Install Android SDK (Fix Buildozer Path)
+      - name: Install Android SDK and Command-line Tools
         run: |
-          mkdir -p $HOME/.buildozer/android/platform/android-sdk
+          mkdir -p $HOME/.buildozer/android/platform/android-sdk/cmdline-tools/latest
           cd $HOME/.buildozer/android/platform/android-sdk
           wget https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip
-          unzip -q *.zip
-          # Move to the structure Buildozer expects
-          mkdir -p tools
-          mv cmdline-tools tools/latest
+          unzip -q *.zip -d cmdline-tools/latest
 
       - name: Accept Android Licenses
         run: |
-          yes | $HOME/.buildozer/android/platform/android-sdk/tools/latest/bin/sdkmanager --licenses
+          yes | $HOME/.buildozer/android/platform/android-sdk/cmdline-tools/latest/bin/sdkmanager \
+              --sdk_root=$HOME/.buildozer/android/platform/android-sdk --licenses
 
-      - name: Verify Buildozer Installation
+      - name: Verify Buildozer installation
         run: buildozer --version
 
       - name: Build APK
