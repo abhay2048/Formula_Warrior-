@@ -17,14 +17,15 @@ jobs:
         run: |
           sudo apt update
           sudo apt install -y git zip unzip openjdk-17-jdk python3-pip \
-            build-essential autoconf libtool pkg-config zlib1g-dev \
-            libncurses6 libncurses-dev libtinfo6 libffi-dev libssl-dev \
-            libgl1-mesa-dev libgles2-mesa-dev gstreamer1.0-plugins-base \
-            gstreamer1.0-plugins-good ffmpeg python3-dev
+              build-essential autoconf libtool pkg-config zlib1g-dev \
+              libncurses6 libncurses-dev libtinfo6 libffi-dev libssl-dev \
+              libgl1-mesa-dev libgles2-mesa-dev libgstreamer1.0-dev \
+              gstreamer1.0-plugins-base gstreamer1.0-plugins-good \
+              ffmpeg python3-dev
 
-      - name: Install Python packages
+      - name: Install Python packages (prebuilt wheels)
         run: |
-          python3 -m pip install --upgrade pip wheel setuptools
+          python3 -m pip install --upgrade pip
           python3 -m pip install --user buildozer Cython==0.29.36 virtualenv
           python3 -m pip install --user kivy[base]==2.2.1 --pre --extra-index-url https://kivy.org/downloads/simple/
           python3 -m pip install --user plyer
@@ -39,7 +40,7 @@ jobs:
           yes | ./cmdline-tools/bin/sdkmanager --sdk_root=$HOME/.buildozer/android/platform/android-sdk \
             "platform-tools" "build-tools;34.0.0" "platforms;android-34"
 
-      - name: Verify Buildozer
+      - name: Verify buildozer
         run: ~/.local/bin/buildozer --version
 
       - name: Build APK
