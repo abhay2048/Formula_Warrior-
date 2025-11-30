@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
+      - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Install system dependencies
@@ -19,38 +19,34 @@ jobs:
           sudo apt install -y git zip unzip openjdk-17-jdk python3-pip \
               build-essential autoconf libtool pkg-config zlib1g-dev \
               libncurses6 libncurses-dev libtinfo6 libffi-dev libssl-dev \
-              libgl1-mesa-dev libgles2-mesa-dev \
-              libgstreamer1.0-dev gstreamer1.0-plugins-base \
-              gstreamer1.0-plugins-good ffmpeg python3-dev
+              libgl1-mesa-dev libgles2-mesa-dev libgstreamer1.0-dev \
+              gstreamer1.0-plugins-base gstreamer1.0-plugins-good \
+              ffmpeg python3-dev
 
       - name: Install Python packages
         run: |
           python3 -m pip install --upgrade pip
           python3 -m pip install --user buildozer Cython==0.29.36 virtualenv
-          python3 -m pip install --user kivy==2.2.1 --pre --extra-index-url https://kivy.org/downloads/simple/
-          python3 -m pip install --user plyer
+          python3 -m pip install --user kivy==2.2.1 plyer
           export PATH=$PATH:~/.local/bin
 
-      - name: Install Android SDK
+      - name: Setup Android SDK & NDK
         run: |
-          mkdir -p $HOME/.buildozer/android/platform/android-sdk/cmdline-tools
-          cd $HOME/.buildozer/android/platform/android-sdk/cmdline-tools
-          wget https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip
-          unzip -q *.zip
-          mv cmdline-tools latest
-          yes | $HOME/.buildozer/android/platform/android-sdk/cmdline-tools/latest/bin/sdkmanager --sdk_root=$HOME/.buildozer/android/platform/android-sdk \
+          export ANDROID_HOME=$HOME/.buildozer/android/platform/android-sdk
+          mkdir -p $ANDROID_HOME/cmdline-tools
+          cd $ANDROID_HOME
+          wget -q https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip -O cmdline-tools.zip
+          unzip -q cmdline-tools.zip -d cmdline-tools
+          mv cmdline-tools/cmdline-tools cmdline-tools/latest
+          yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --sdk_root=$ANDROID_HOME \
             "platform-tools" "build-tools;34.0.0" "platforms;android-34"
+          wget -q https://dl.google.com/android/repository/android-ndk-r25b-linux.zip
+          unzip -q android-ndk-r25b-linux.zip -d $HOME/.buildozer/android/platform
 
-      - name: Install Android NDK
+      - name: Verify Buildozer installation
         run: |
-          mkdir -p $HOME/.buildozer/android/platform
-          cd $HOME/.buildozer/android/platform
-          wget https://dl.google.com/android/repository/android-ndk-r25b-linux.zip
-          unzip -q android-ndk-r25b-linux.zip
-          rm android-ndk-r25b-linux.zip
-
-      - name: Verify Buildozer
-        run: ~/.local/bin/buildozer --version
+          export PATH=$PATH:~/.local/bin
+          buildozer --version
 
       - name: Build APK
         env:
@@ -58,7 +54,7 @@ jobs:
           ANDROIDNDK: $HOME/.buildozer/android/platform/android-ndk-r25b
         run: |
           export PATH=$PATH:~/.local/bin
-          buildozer -v android debug
+          buildozer -v android debug --ignore-setup-py --copy-libs
 
       - name: Upload APK
         if: always()
