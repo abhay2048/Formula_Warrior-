@@ -73,5 +73,8 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: formula-warrior-apk
-          path: bin/*.apk
+          path: |
+            .buildozer/android/platform/build-*/bin/*.apk
+            .buildozer/android/platform/build-*/outputs/apk/debug/*.apk
           retention-days: 7
+
