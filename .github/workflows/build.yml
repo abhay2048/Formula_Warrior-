@@ -21,38 +21,30 @@ jobs:
               libncurses6 libncurses-dev libtinfo6 libffi-dev libssl-dev \
               python3-dev
 
-      - name: Install Buildozer and core tools
+      - name: Install Buildozer and core Python packages
         run: |
-          python3 -m pip install --upgrade pip
+          python3 -m pip install --upgrade pip wheel setuptools
           python3 -m pip install --user buildozer Cython==0.29.36 virtualenv
           echo "$HOME/.local/bin" >> $GITHUB_PATH
 
-      - name: Cache Buildozer and p4a
-        uses: actions/cache@v3
-        with:
-          path: |
-            ~/.buildozer/android/platform
-            ~/.buildozer/android/platform/python-for-android
-          key: ${{ runner.os }}-buildozer-${{ hashFiles('**/buildozer.spec') }}
-
       - name: Install Android SDK command-line tools
         run: |
-          mkdir -p $HOME/.buildozer/android/platform/android-sdk/cmdline-tools/latest
-          cd $HOME/.buildozer/android/platform/android-sdk/cmdline-tools/latest
+          mkdir -p $HOME/.buildozer/android/platform/android-sdk/cmdline-tools
+          cd $HOME/.buildozer/android/platform/android-sdk/cmdline-tools
           wget https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip
           unzip -q *.zip
-          yes | ./bin/sdkmanager --sdk_root=$HOME/.buildozer/android/platform/android-sdk \
+          mkdir -p latest
+          mv cmdline-tools/* latest/
+          yes | latest/bin/sdkmanager --sdk_root=$HOME/.buildozer/android/platform/android-sdk \
             "platform-tools" "build-tools;34.0.0" "platforms;android-34"
 
-      - name: Verify Buildozer
+      - name: Verify Buildozer installation
         run: buildozer --version
 
       - name: Build APK
         env:
           ANDROIDSDK: $HOME/.buildozer/android/platform/android-sdk
         run: |
-          export PATH=$PATH:~/.local/bin
-          # First run will download NDK, compile Python-for-Android, then Kivy
           buildozer -v android debug
 
       - name: Upload APK Artifact
