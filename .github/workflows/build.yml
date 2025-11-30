@@ -1,4 +1,4 @@
-Name: Build Formula Warrior APK
+name: Build Formula Warrior APK
 
 on:
   push:
@@ -16,49 +16,38 @@ jobs:
       - name: Install system dependencies (Required for Buildozer/Python-for-Android)
         run: |
           sudo apt update
-          # Basic tools for compilation
           sudo apt install -y git zip unzip openjdk-17-jdk python3-pip \
               build-essential autoconf libtool pkg-config zlib1g-dev \
               libncurses6 libncurses-dev libtinfo6 libffi-dev libssl-dev \
-              # Removed Kivy-specific dependencies (libgl1-mesa-dev, gstreamer, etc.) 
-              # as they are not needed on the host system for the Android build
               python3-dev
 
       - name: Install Buildozer and core tools
         run: |
-          # Upgrade pip
           python3 -m pip install --upgrade pip
-          # Install buildozer and its core Python build dependencies using --user
           python3 -m pip install --user buildozer Cython==0.29.36 virtualenv
-          # Ensure local bin is in PATH for subsequent steps
           echo "$HOME/.local/bin" >> $GITHUB_PATH
 
-      - name: Install Android SDK (Using Buildozer's expected path structure)
+      - name: Install Android SDK
         run: |
-          # Create the path structure Buildozer expects
           mkdir -p $HOME/.buildozer/android/platform/android-sdk
           cd $HOME/.buildozer/android/platform/android-sdk
-          
-          # Download and unzip the command-line tools
           wget https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip
           unzip -q *.zip
-          
-          # Install necessary components (platform-tools, build-tools, platform)
           yes | ./cmdline-tools/bin/sdkmanager --sdk_root=$HOME/.buildozer/android/platform/android-sdk \
             "platform-tools" "build-tools;34.0.0" "platforms;android-34"
 
-      - name: Verify buildozer installation
-        # The PATH is already set via $GITHUB_PATH in the previous step
+      - name: Verify Buildozer installation
         run: buildozer --version
 
-      - name: Build APK (Let Buildozer handle Kivy and p4a dependencies)
+      - name: Install prebuilt Kivy and dependencies
+        run: |
+          python3 -m pip install --user kivy[base]==2.2.1 --pre --extra-index-url https://kivy.org/downloads/simple/
+          python3 -m pip install --user plyer
+
+      - name: Build APK
         env:
-          # Set Android SDK path explicitly as an environment variable for buildozer
           ANDROIDSDK: $HOME/.buildozer/android/platform/android-sdk
         run: |
-          # The first run will download NDK, compile Python-for-Android, 
-          # and then compile Kivy for the target Android architecture.
-          # This avoids the host-system compilation error you encountered.
           buildozer -v android debug
 
       - name: Upload APK Artifact
