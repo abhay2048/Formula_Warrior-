@@ -27,6 +27,9 @@ jobs:
           python3 -m pip install --user buildozer Cython==0.29.36 virtualenv
           echo "$HOME/.local/bin" >> $GITHUB_PATH
 
+      - name: Clean previous build
+        run: rm -rf .buildozer
+
       - name: Install Android SDK command-line tools
         run: |
           SDK_ROOT=$HOME/.buildozer/android/platform/android-sdk
@@ -35,10 +38,9 @@ jobs:
           wget https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip
           unzip -q *.zip
           mv cmdline-tools latest
-          # Create 'tools' symlink for Buildozer
           ln -s $SDK_ROOT/cmdline-tools/latest $SDK_ROOT/tools
           yes | $SDK_ROOT/tools/bin/sdkmanager --sdk_root=$SDK_ROOT \
-            "platform-tools" "build-tools;34.0.0" "platforms;android-34"
+            "platform-tools" "build-tools;33.0.2" "platforms;android-33"
 
       - name: Install Android NDK
         run: |
