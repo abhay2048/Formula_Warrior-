@@ -29,14 +29,25 @@ jobs:
 
       - name: Install Android SDK command-line tools
         run: |
-          mkdir -p $HOME/.buildozer/android/platform/android-sdk/cmdline-tools
-          cd $HOME/.buildozer/android/platform/android-sdk/cmdline-tools
+          SDK_ROOT=$HOME/.buildozer/android/platform/android-sdk
+          mkdir -p $SDK_ROOT/cmdline-tools
+          cd $SDK_ROOT/cmdline-tools
           wget https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip
           unzip -q *.zip
-          mkdir -p latest
-          mv cmdline-tools/* latest/
-          yes | $HOME/.buildozer/android/platform/android-sdk/cmdline-tools/latest/bin/sdkmanager --sdk_root=$HOME/.buildozer/android/platform/android-sdk \
-            "platform-tools" "build-tools;34.0.0" "platforms;android-34" 
+          mv cmdline-tools latest
+          # Create 'tools' symlink for Buildozer
+          ln -s $SDK_ROOT/cmdline-tools/latest $SDK_ROOT/tools
+          yes | $SDK_ROOT/tools/bin/sdkmanager --sdk_root=$SDK_ROOT \
+            "platform-tools" "build-tools;34.0.0" "platforms;android-34"
+
+      - name: Install Android NDK
+        run: |
+          NDK_URL="https://dl.google.com/android/repository/android-ndk-r25b-linux.zip"
+          NDK_DIR=$HOME/.buildozer/android/platform
+          mkdir -p $NDK_DIR
+          wget -q $NDK_URL -O android-ndk-r25b-linux.zip
+          unzip -q android-ndk-r25b-linux.zip -d $NDK_DIR
+          rm android-ndk-r25b-linux.zip
 
       - name: Verify Buildozer
         run: buildozer --version
@@ -44,6 +55,7 @@ jobs:
       - name: Build APK
         env:
           ANDROIDSDK: $HOME/.buildozer/android/platform/android-sdk
+          ANDROIDNDK: $HOME/.buildozer/android/platform/android-ndk-r25b
         run: |
           buildozer -v android debug
 
