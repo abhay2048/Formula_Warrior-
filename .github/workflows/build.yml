@@ -19,7 +19,7 @@ jobs:
           sudo apt install -y \
             git zip unzip openjdk-17-jdk python3-pip \
             build-essential autoconf libtool pkg-config zlib1g-dev \
-            libncurses5 libncurses5-dev libncursesw5-dev libtinfo5 \
+            libncurses6 libncurses-dev libncursesw6 \
             libffi-dev libssl-dev
 
       - name: Install Python deps
@@ -27,6 +27,11 @@ jobs:
           python3 -m pip install --upgrade pip
           python3 -m pip install buildozer Cython==0.29.33 virtualenv
           export PATH=$PATH:~/.local/bin
+
+      - name: Fix library compatibility
+        run: |
+          # Some programs expect libtinfo.so.5; create symlink
+          sudo ln -s /lib/x86_64-linux-gnu/libtinfo.so.6 /lib/x86_64-linux-gnu/libtinfo.so.5 || true
 
       - name: Build APK with Buildozer
         run: |
