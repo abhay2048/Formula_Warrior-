@@ -1,45 +1,41 @@
-name: Build Formula Warrior APK
+name: Build APK
 
 on:
   push:
-    branches: [ "main" ]
-  workflow_dispatch:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v3
 
-      - name: Install dependencies
-        run: |
-          sudo apt update
-          sudo apt install -y git zip unzip openjdk-17-jdk python3-pip \
-              build-essential autoconf libtool pkg-config zlib1g-dev \
-              libncurses6 libncurses-dev libncursesw6-dev libtinfo6 \
-              libffi-dev libssl-dev
+      - name: Set up Java
+        uses: actions/setup-java@v3
+        with:
+          distribution: "temurin"
+          java-version: "17"
 
-      - name: Install Python packages
-        run: |
-          python3 -m pip install --upgrade pip
-          python3 -m pip install buildozer Cython==0.29.33
-          python3 -m pip install --upgrade virtualenv
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
 
-      - name: Verify buildozer
-        run: |
-          buildozer --version
+      - name: Grant execute permission for gradlew
+        run: chmod +x ./gradlew
 
-      - name: Run Buildozer (android debug)
-        env:
-          ANDROIDSDK: ${{ runner.temp }}/android-sdk
-        run: |
-          buildozer -v android debug
+      - name: Download dependencies
+        run: ./gradlew dependencies
+
+      - name: Build debug APK
+        run: ./gradlew assembleDebug
 
       - name: Upload APK artifact
-        if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v3
         with:
-          name: apk-artifacts
-          path: bin/*.apk
+          name: app-debug
+          path: app/build/outputs/apk/debug/app-debug.apk
