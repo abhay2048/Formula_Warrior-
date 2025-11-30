@@ -13,31 +13,35 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Install system dependencies
+      - name: Install System Dependencies
         run: |
           sudo apt update
           sudo apt install -y git zip unzip openjdk-17-jdk python3-pip \
-            build-essential autoconf libtool pkg-config zlib1g-dev \
-            libncurses6 libncurses-dev libtinfo6 libffi-dev libssl-dev \
-            python3-dev wget curl
+              build-essential autoconf libtool pkg-config zlib1g-dev \
+              libncurses6 libncurses-dev libtinfo6 libffi-dev libssl-dev \
+              python3-dev
 
-      - name: Install Buildozer and core Python tools
+      - name: Install Buildozer and Core Tools
         run: |
-          python3 -m pip install --upgrade pip wheel setuptools
+          python3 -m pip install --upgrade pip
           python3 -m pip install --user buildozer Cython==0.29.36 virtualenv
           echo "$HOME/.local/bin" >> $GITHUB_PATH
 
-      - name: Install Android SDK + Accept licenses
+      - name: Install Android SDK (Fix Buildozer Path)
         run: |
           mkdir -p $HOME/.buildozer/android/platform/android-sdk
           cd $HOME/.buildozer/android/platform/android-sdk
           wget https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip
           unzip -q *.zip
-          yes | ./cmdline-tools/bin/sdkmanager --sdk_root=$HOME/.buildozer/android/platform/android-sdk --licenses
-          yes | ./cmdline-tools/bin/sdkmanager --sdk_root=$HOME/.buildozer/android/platform/android-sdk \
-            "platform-tools" "build-tools;36.1.0" "platforms;android-36"
+          # Move to the structure Buildozer expects
+          mkdir -p tools
+          mv cmdline-tools tools/latest
 
-      - name: Verify Buildozer
+      - name: Accept Android Licenses
+        run: |
+          yes | $HOME/.buildozer/android/platform/android-sdk/tools/latest/bin/sdkmanager --licenses
+
+      - name: Verify Buildozer Installation
         run: buildozer --version
 
       - name: Build APK
