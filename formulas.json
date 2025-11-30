@@ -1,0 +1,9 @@
+{
+  "sin(A+B)": "sinAcosB + cosAsinB",
+  "sin(A-B)": "sinAcosB - cosAsinB",
+  "cos(A+B)": "cosAcosB - sinAsinB",
+  "tan(2A)": "2tanA / (1 - tanA^2)",
+  "sin2A": "2sinAcosA",
+  "cos2A": "cos^2A - sin^2A",
+  "Quadratic formula": "(-b \u00b1 sqrt(b^2 - 4ac)) / (2a)"
+}
