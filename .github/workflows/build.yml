@@ -54,12 +54,20 @@ jobs:
       - name: Verify Buildozer
         run: buildozer --version
 
-      - name: Build APK
+      - name: Build APK and capture log
         env:
           ANDROIDSDK: $HOME/.buildozer/android/platform/android-sdk
           ANDROIDNDK: $HOME/.buildozer/android/platform/android-ndk-r25b
         run: |
-          buildozer -v android debug
+          mkdir -p build_logs
+          buildozer -v android debug | tee build_logs/buildozer.log
+
+      - name: Upload build log artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: buildozer-log
+          path: build_logs/buildozer.log
+          retention-days: 7
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
@@ -67,4 +75,3 @@ jobs:
           name: formula-warrior-apk
           path: bin/*.apk
           retention-days: 7
-
