@@ -8,53 +8,46 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout repo
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install system dependencies
+      - name: Install dependencies
         run: |
           sudo apt update
-          sudo apt install -y \
-            git zip unzip openjdk-17-jdk python3-pip python3-setuptools \
-            build-essential autoconf libtool pkg-config zlib1g-dev \
-            libncurses5 libncurses5-dev libncursesw5-dev libtinfo5 \
-            libffi-dev libssl-dev libstdc++6
+          sudo apt install -y git zip unzip openjdk-17-jdk python3-pip \
+              build-essential autoconf libtool pkg-config zlib1g-dev \
+              libncurses6 libncurses-dev libncursesw6-dev libtinfo6 \
+              libffi-dev libssl-dev
 
-      - name: Install SDKMAN + Java + Android SDK tools
-        run: |
-          curl -s "https://get.sdkman.io" | bash
-          source "$HOME/.sdkman/bin/sdkman-init.sh"
-
-          mkdir -p $HOME/android-sdk
-          cd $HOME/android-sdk
-
-          wget https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip -O cmd.zip
-          unzip cmd.zip -d cmdline-tools
-          mkdir -p cmdline-tools/latest
-          mv cmdline-tools/cmdline-tools/* cmdline-tools/latest/
-
-          export ANDROID_HOME=$HOME/android-sdk
-          export PATH=$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$PATH
-
-          yes | sdkmanager --sdk_root=$ANDROID_HOME "platform-tools" "platforms;android-33" "build-tools;33.0.2"
-
-      - name: Install Python dependencies
+      - name: Install Python packages
         run: |
           python3 -m pip install --upgrade pip
-          python3 -m pip install Cython==0.29.33 buildozer virtualenv
+          python3 -m pip install --user buildozer Cython==0.29.33
+          python3 -m pip install --user --upgrade virtualenv
+          export PATH=$PATH:~/.local/bin
+
+      - name: Install Android SDK
+        run: |
+          mkdir -p $HOME/.buildozer/android/platform/android-sdk
+          cd $HOME/.buildozer/android/platform/android-sdk
+          wget https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip
+          unzip *.zip
+          yes | ./cmdline-tools/bin/sdkmanager --sdk_root=$HOME/.buildozer/android/platform/android-sdk \
+            "platform-tools" "build-tools;34.0.0" "platforms;android-34"
+
+      - name: Verify buildozer
+        run: ~/.local/bin/buildozer --version
 
       - name: Build APK
         env:
-          ANDROIDSDK: $HOME/android-sdk
-          ANDROID_HOME: $HOME/android-sdk
-          PATH: $HOME/android-sdk/build-tools/33.0.2:$HOME/android-sdk/platform-tools:$PATH
+          ANDROIDSDK: $HOME/.buildozer/android/platform/android-sdk
         run: |
           export PATH=$PATH:~/.local/bin
-          buildozer android debug
+          buildozer -v android debug
 
       - name: Upload APK
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: formula-warrior-apk
