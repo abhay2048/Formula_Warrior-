@@ -9,6 +9,11 @@ jobs:
   build:
     runs-on: ubuntu-latest
 
+    env:
+      ANDROIDSDK: $HOME/.buildozer/android/platform/android-sdk
+      ANDROIDNDK: $HOME/.buildozer/android/platform/android-ndk-r25b
+      ANDROID_SDKMANAGER: $HOME/.buildozer/android/platform/android-sdk/cmdline-tools/latest/bin/sdkmanager
+
     steps:
       # -----------------------------------------------------------
       # Checkout repository
@@ -20,7 +25,7 @@ jobs:
       # Clear old Buildozer cache
       # -----------------------------------------------------------
       - name: Clear Buildozer cache
-        run: rm -rf ~/.buildozer
+        run: rm -rf ~/.buildozer ~/.buildozer/android/platform/android-sdk/tools ~/.buildozer/cache
 
       # -----------------------------------------------------------
       # Install system dependencies
@@ -39,8 +44,7 @@ jobs:
       - name: Install Buildozer
         run: |
           python3 -m pip install --upgrade pip
-          pip install buildozer Cython==0.29.36 virtualenv
-          echo "$HOME/.local/bin" >> $GITHUB_PATH
+          pip install buildozer Cython==0.29.36 virtualenv python-for-android
 
       # -----------------------------------------------------------
       # Install Android SDK (modern command-line tools)
@@ -49,11 +53,9 @@ jobs:
         run: |
           SDK=$HOME/.buildozer/android/platform/android-sdk
           mkdir -p $SDK/cmdline-tools
-
           wget -q https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip -O cmdline-tools.zip
           unzip -q cmdline-tools.zip -d $SDK/cmdline-tools
           mv $SDK/cmdline-tools/cmdline-tools $SDK/cmdline-tools/latest
-
           chmod +x $SDK/cmdline-tools/latest/bin/sdkmanager
 
           # Accept licenses
@@ -62,14 +64,6 @@ jobs:
           # Install platform-tools, build-tools, and platforms
           yes | $SDK/cmdline-tools/latest/bin/sdkmanager --sdk_root=$SDK \
             "platform-tools" "build-tools;33.0.2" "platforms;android-33"
-
-      # -----------------------------------------------------------
-      # Export Android tools to PATH
-      # -----------------------------------------------------------
-      - name: Export Android tools to PATH
-        run: |
-          echo "$HOME/.buildozer/android/platform/android-sdk/cmdline-tools/latest/bin" >> $GITHUB_PATH
-          echo "$HOME/.buildozer/android/platform/android-sdk/platform-tools" >> $GITHUB_PATH
 
       # -----------------------------------------------------------
       # Install Android NDK r25b
@@ -83,26 +77,24 @@ jobs:
           rm android-ndk-r25b-linux.zip
 
       # -----------------------------------------------------------
-      # Patch buildozer.spec with correct SDK/NDK paths
+      # Patch buildozer.spec with correct paths
       # -----------------------------------------------------------
       - name: Patch buildozer.spec
         run: |
           sed -i 's|#\? *android.sdk_path.*|android.sdk_path = /home/runner/.buildozer/android/platform/android-sdk|g' buildozer.spec
           sed -i 's|#\? *android.ndk_path.*|android.ndk_path = /home/runner/.buildozer/android/platform/android-ndk-r25b|g' buildozer.spec
 
-      # -----------------------------------------------------------
-      # Redirect Buildozer to modern sdkmanager
-      # -----------------------------------------------------------
-      - name: Force Buildozer to use modern sdkmanager
-        run: echo "ANDROID_SDKMANAGER=$HOME/.buildozer/android/platform/android-sdk/cmdline-tools/latest/bin/sdkmanager" >> $GITHUB_ENV
+          # Ensure sdkmanager path is set
+          if grep -q "android.sdkmanager_path" buildozer.spec; then
+            sed -i 's|android.sdkmanager_path.*|android.sdkmanager_path = /home/runner/.buildozer/android/platform/android-sdk/cmdline-tools/latest/bin/sdkmanager|g' buildozer.spec
+          else
+            echo "android.sdkmanager_path = /home/runner/.buildozer/android/platform/android-sdk/cmdline-tools/latest/bin/sdkmanager" >> buildozer.spec
+          fi
 
       # -----------------------------------------------------------
       # Build APK
       # -----------------------------------------------------------
       - name: Build APK
-        env:
-          ANDROIDSDK: $HOME/.buildozer/android/platform/android-sdk
-          ANDROIDNDK: $HOME/.buildozer/android/platform/android-ndk-r25b
         run: |
           mkdir -p build_logs
           buildozer -v android debug | tee build_logs/buildozer.log
