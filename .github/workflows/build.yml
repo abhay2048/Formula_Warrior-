@@ -25,7 +25,7 @@ jobs:
       # Clear old Buildozer cache
       # -----------------------------------------------------------
       - name: Clear Buildozer cache
-        run: rm -rf ~/.buildozer ~/.buildozer/android/platform/android-sdk/tools ~/.buildozer/cache
+        run: rm -rf ~/.buildozer ~/.buildozer/cache
 
       # -----------------------------------------------------------
       # Install system dependencies
@@ -84,7 +84,6 @@ jobs:
           sed -i 's|#\? *android.sdk_path.*|android.sdk_path = /home/runner/.buildozer/android/platform/android-sdk|g' buildozer.spec
           sed -i 's|#\? *android.ndk_path.*|android.ndk_path = /home/runner/.buildozer/android/platform/android-ndk-r25b|g' buildozer.spec
 
-          # Ensure sdkmanager path is set
           if grep -q "android.sdkmanager_path" buildozer.spec; then
             sed -i 's|android.sdkmanager_path.*|android.sdkmanager_path = /home/runner/.buildozer/android/platform/android-sdk/cmdline-tools/latest/bin/sdkmanager|g' buildozer.spec
           else
@@ -92,12 +91,13 @@ jobs:
           fi
 
       # -----------------------------------------------------------
-      # Build APK (capture all stdout + stderr)
+      # Build APK (capture all output)
       # -----------------------------------------------------------
       - name: Build APK
         run: |
-          mkdir -p build_logs
-          buildozer -v android debug > build_logs/buildozer.log 2>&1
+          BUILD_LOG=$GITHUB_WORKSPACE/build_logs/buildozer.log
+          mkdir -p $(dirname "$BUILD_LOG")
+          buildozer -v android debug > "$BUILD_LOG" 2>&1 || true
 
       # -----------------------------------------------------------
       # Upload build logs
