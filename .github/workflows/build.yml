@@ -59,12 +59,12 @@ jobs:
           # Accept licenses
           yes | $SDK/cmdline-tools/latest/bin/sdkmanager --licenses
 
-          # Install platform tools, build tools, and platforms
+          # Install platform-tools, build-tools, and platforms
           yes | $SDK/cmdline-tools/latest/bin/sdkmanager --sdk_root=$SDK \
             "platform-tools" "build-tools;33.0.2" "platforms;android-33"
 
       # -----------------------------------------------------------
-      # Export SDK tools to PATH
+      # Export Android tools to PATH
       # -----------------------------------------------------------
       - name: Export Android tools to PATH
         run: |
@@ -83,7 +83,7 @@ jobs:
           rm android-ndk-r25b-linux.zip
 
       # -----------------------------------------------------------
-      # Patch buildozer.spec with correct paths
+      # Patch buildozer.spec with correct SDK/NDK/sdkmanager paths
       # -----------------------------------------------------------
       - name: Patch buildozer.spec
         run: |
