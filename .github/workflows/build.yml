@@ -25,7 +25,7 @@ jobs:
       # Clear old Buildozer cache
       # -----------------------------------------------------------
       - name: Clear Buildozer cache
-        run: rm -rf ~/.buildozer ~/.buildozer/cache
+        run: rm -rf ~/.buildozer ~/.buildozer/android/platform ~/.buildozer/cache
 
       # -----------------------------------------------------------
       # Install system dependencies
@@ -39,7 +39,7 @@ jobs:
             libncurses-dev libffi-dev libssl-dev python3-dev wget curl
 
       # -----------------------------------------------------------
-      # Install Buildozer
+      # Install Buildozer & Python-for-Android
       # -----------------------------------------------------------
       - name: Install Buildozer
         run: |
@@ -91,13 +91,13 @@ jobs:
           fi
 
       # -----------------------------------------------------------
-      # Build APK (capture all output)
+      # Build APK (force clean build, capture all logs)
       # -----------------------------------------------------------
       - name: Build APK
         run: |
           BUILD_LOG=$GITHUB_WORKSPACE/build_logs/buildozer.log
           mkdir -p $(dirname "$BUILD_LOG")
-          buildozer -v android debug > "$BUILD_LOG" 2>&1 || true
+          buildozer -v android debug --clean > "$BUILD_LOG" 2>&1 || true
 
       # -----------------------------------------------------------
       # Upload build logs
