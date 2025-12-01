@@ -83,18 +83,18 @@ jobs:
           rm android-ndk-r25b-linux.zip
 
       # -----------------------------------------------------------
-      # Patch buildozer.spec with correct SDK/NDK/sdkmanager paths
+      # Patch buildozer.spec with correct SDK/NDK paths
       # -----------------------------------------------------------
       - name: Patch buildozer.spec
         run: |
           sed -i 's|#\? *android.sdk_path.*|android.sdk_path = /home/runner/.buildozer/android/platform/android-sdk|g' buildozer.spec
           sed -i 's|#\? *android.ndk_path.*|android.ndk_path = /home/runner/.buildozer/android/platform/android-ndk-r25b|g' buildozer.spec
 
-          if grep -q "android.sdkmanager_path" buildozer.spec; then
-            sed -i 's|android.sdkmanager_path.*|android.sdkmanager_path = /home/runner/.buildozer/android/platform/android-sdk/cmdline-tools/latest/bin/sdkmanager|g' buildozer.spec
-          else
-            echo "android.sdkmanager_path = /home/runner/.buildozer/android/platform/android-sdk/cmdline-tools/latest/bin/sdkmanager" >> buildozer.spec
-          fi
+      # -----------------------------------------------------------
+      # Redirect Buildozer to modern sdkmanager
+      # -----------------------------------------------------------
+      - name: Force Buildozer to use modern sdkmanager
+        run: echo "ANDROID_SDKMANAGER=$HOME/.buildozer/android/platform/android-sdk/cmdline-tools/latest/bin/sdkmanager" >> $GITHUB_ENV
 
       # -----------------------------------------------------------
       # Build APK
