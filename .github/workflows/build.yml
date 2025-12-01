@@ -92,12 +92,12 @@ jobs:
           fi
 
       # -----------------------------------------------------------
-      # Build APK
+      # Build APK (capture all stdout + stderr)
       # -----------------------------------------------------------
       - name: Build APK
         run: |
           mkdir -p build_logs
-          buildozer -v android debug | tee build_logs/buildozer.log
+          buildozer -v android debug > build_logs/buildozer.log 2>&1
 
       # -----------------------------------------------------------
       # Upload build logs
