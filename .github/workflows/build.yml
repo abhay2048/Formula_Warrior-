@@ -14,7 +14,7 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v4
 
-      # System Dependencies -----------------------------------------------
+      # Dependencies ------------------------------------------------------
       - name: Install system deps
         run: |
           sudo apt update
@@ -23,7 +23,6 @@ jobs:
             build-essential autoconf libtool pkg-config zlib1g-dev \
             libncurses-dev libffi-dev libssl-dev python3-dev wget curl
 
-      # Buildozer ----------------------------------------------------------
       - name: Install Buildozer
         run: |
           python3 -m pip install --upgrade pip
@@ -38,6 +37,8 @@ jobs:
           wget -q https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip
           unzip -q commandlinetools-linux-9477386_latest.zip -d $SDK/cmdline-tools
           mv $SDK/cmdline-tools/cmdline-tools $SDK/cmdline-tools/latest
+          
+          # Install platforms + tools
           yes | $SDK/cmdline-tools/latest/bin/sdkmanager --sdk_root=$SDK \
               "platform-tools" "build-tools;33.0.2" "platforms;android-33"
 
@@ -49,17 +50,27 @@ jobs:
           unzip -q android-ndk-r25b-linux.zip -d $NDK
           rm android-ndk-r25b-linux.zip
 
-      # Build --------------------------------------------------------------
+      # Fix Buildozer config paths ---------------------------------------
+      - name: Patch buildozer.spec paths
+        run: |
+          sed -i 's|# *android.sdk_path.*|android.sdk_path = /home/runner/.buildozer/android/platform/android-sdk|g' buildozer.spec
+          sed -i 's|# *android.ndk_path.*|android.ndk_path = /home/runner/.buildozer/android/platform/android-ndk-r25b|g' buildozer.spec
+          
+          # Add missing line if not found
+          if ! grep -q "android.sdkmanager_path" buildozer.spec; then
+            echo "android.sdkmanager_path = /home/runner/.buildozer/android/platform/android-sdk/cmdline-tools/latest/bin/sdkmanager" >> buildozer.spec
+          fi
+
+      # Build -------------------------------------------------------------
       - name: Build APK
         env:
           ANDROIDSDK: $HOME/.buildozer/android/platform/android-sdk
           ANDROIDNDK: $HOME/.buildozer/android/platform/android-ndk-r25b
         run: |
-          export PATH="$ANDROIDSDK/cmdline-tools/latest/bin:$ANDROIDSDK/platform-tools:$PATH"
           mkdir -p build_logs
           buildozer -v android debug | tee build_logs/buildozer.log
 
-      # Upload log ---------------------------------------------------------
+      # Upload logs -------------------------------------------------------
       - name: Upload build log
         uses: actions/upload-artifact@v4
         with:
@@ -67,17 +78,15 @@ jobs:
           path: build_logs/buildozer.log
           retention-days: 7
 
-      # APK search (debug info) --------------------------------------------
+      # APK locating -------------------------------------------------------
       - name: Debug APK paths
         run: find . -name "*.apk" -maxdepth 15 || true
 
-      # Upload APK ---------------------------------------------------------
+      # Upload APK --------------------------------------------------------
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: formula-warrior-apk
           path: |
-            .buildozer/android/app/build/outputs/apk/**/*.apk
-            .buildozer/android/platform/**/dists/**/bin/**/*.apk
             .buildozer/**/*.apk
           retention-days: 7
