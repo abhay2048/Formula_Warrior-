@@ -15,24 +15,34 @@ jobs:
       ANDROID_SDKMANAGER: $HOME/.buildozer/android/platform/android-sdk/cmdline-tools/latest/bin/sdkmanager
 
     steps:
+      # -----------------------------------------------------------
       # Checkout repository
+      # -----------------------------------------------------------
       - uses: actions/checkout@v4
 
+      # -----------------------------------------------------------
       # Clear old Buildozer cache
+      # -----------------------------------------------------------
       - run: rm -rf ~/.buildozer ~/.buildozer/android/platform ~/.buildozer/cache
 
+      # -----------------------------------------------------------
       # Install system dependencies
+      # -----------------------------------------------------------
       - run: |
           sudo apt update
           sudo apt install -y git zip unzip openjdk-17-jdk python3-pip build-essential \
             autoconf libtool pkg-config zlib1g-dev libncurses-dev libffi-dev libssl-dev python3-dev wget curl
 
-      # Install Buildozer & python-for-android
+      # -----------------------------------------------------------
+      # Install Buildozer & Python-for-Android
+      # -----------------------------------------------------------
       - run: |
           python3 -m pip install --upgrade pip
           pip install buildozer Cython==0.29.36 virtualenv python-for-android
 
+      # -----------------------------------------------------------
       # Install Android SDK cmdline-tools
+      # -----------------------------------------------------------
       - run: |
           SDK=$HOME/.buildozer/android/platform/android-sdk
           mkdir -p $SDK/cmdline-tools
@@ -43,7 +53,9 @@ jobs:
           yes | $SDK/cmdline-tools/latest/bin/sdkmanager --licenses
           yes | $SDK/cmdline-tools/latest/bin/sdkmanager --sdk_root=$SDK "platform-tools" "build-tools;33.0.2" "platforms;android-33"
 
+      # -----------------------------------------------------------
       # Install Android NDK r25b
+      # -----------------------------------------------------------
       - run: |
           NDK=$HOME/.buildozer/android/platform
           rm -rf $NDK/android-ndk-r25b || true
@@ -51,7 +63,9 @@ jobs:
           unzip -q android-ndk-r25b-linux.zip -d $NDK
           rm android-ndk-r25b-linux.zip
 
+      # -----------------------------------------------------------
       # Patch buildozer.spec paths
+      # -----------------------------------------------------------
       - run: |
           sed -i 's|#\? *android.sdk_path.*|android.sdk_path = /home/runner/.buildozer/android/platform/android-sdk|g' buildozer.spec
           sed -i 's|#\? *android.ndk_path.*|android.ndk_path = /home/runner/.buildozer/android/platform/android-ndk-r25b|g' buildozer.spec
@@ -61,13 +75,23 @@ jobs:
             echo "android.sdkmanager_path = /home/runner/.buildozer/android/platform/android-sdk/cmdline-tools/latest/bin/sdkmanager" >> buildozer.spec
           fi
 
-      # Build APK
-      - run: buildozer android debug || true
+      # -----------------------------------------------------------
+      # Build APK (force clean build)
+      # -----------------------------------------------------------
+      - run: buildozer android debug --clean || true
 
+      # -----------------------------------------------------------
+      # Find the APK and copy to workspace
+      # -----------------------------------------------------------
+      - run: |
+          mkdir -p $GITHUB_WORKSPACE/apk
+          find . -name "*.apk" -type f -exec cp {} $GITHUB_WORKSPACE/apk/ \;
+
+      # -----------------------------------------------------------
       # Upload APK
+      # -----------------------------------------------------------
       - uses: actions/upload-artifact@v4
         with:
           name: formula-warrior-apk
-          path: .buildozer/android/platform/build
+          path: apk/*.apk
           retention-days: 7
-
