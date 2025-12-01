@@ -10,11 +10,21 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # Checkout ----------------------------------------------------------
+      # -----------------------------------------------------------
+      # Checkout repo
+      # -----------------------------------------------------------
       - name: Checkout repo
         uses: actions/checkout@v4
 
-      # Dependencies ------------------------------------------------------
+      # -----------------------------------------------------------
+      # Clear old buildozer cache (IMPORTANT)
+      # -----------------------------------------------------------
+      - name: Clear old Buildozer cache
+        run: rm -rf ~/.buildozer
+
+      # -----------------------------------------------------------
+      # Install system dependencies
+      # -----------------------------------------------------------
       - name: Install system deps
         run: |
           sudo apt update
@@ -23,32 +33,33 @@ jobs:
             build-essential autoconf libtool pkg-config zlib1g-dev \
             libncurses-dev libffi-dev libssl-dev python3-dev wget curl
 
+      # -----------------------------------------------------------
+      # Install Buildozer
+      # -----------------------------------------------------------
       - name: Install Buildozer
         run: |
           python3 -m pip install --upgrade pip
           pip install buildozer Cython==0.29.36 virtualenv
           echo "$HOME/.local/bin" >> $GITHUB_PATH
 
-      # Android SDK -------------------------------------------------------
+      # -----------------------------------------------------------
+      # Install Android SDK (modern cmdline-tools version)
+      # -----------------------------------------------------------
       - name: Install Android SDK
         run: |
           SDK=$HOME/.buildozer/android/platform/android-sdk
           mkdir -p $SDK/cmdline-tools
-          
-          # Download cmdline-tools
+
           wget -q https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip
           unzip -q commandlinetools-linux-9477386_latest.zip -d $SDK/cmdline-tools
           mv $SDK/cmdline-tools/cmdline-tools $SDK/cmdline-tools/latest
 
-          # FIX: Accept licenses
-          mkdir -p $SDK/licenses
-          echo -e "8933bad161af4178b1185d1a37fbf41ea5269c55\nd56f5187479451eabf01fb78af6dfcb131a6481e" > $SDK/licenses/android-sdk-license
-
-          # Install platforms + tools
           yes | $SDK/cmdline-tools/latest/bin/sdkmanager --sdk_root=$SDK \
-              "platform-tools" "build-tools;33.0.2" "platforms;android-33"
+            "platform-tools" "build-tools;33.0.2" "platforms;android-33"
 
-      # Android NDK -------------------------------------------------------
+      # -----------------------------------------------------------
+      # Install Android NDK r25b (recommended for Kivy)
+      # -----------------------------------------------------------
       - name: Install Android NDK r25b
         run: |
           NDK=$HOME/.buildozer/android/platform
@@ -56,18 +67,27 @@ jobs:
           unzip -q android-ndk-r25b-linux.zip -d $NDK
           rm android-ndk-r25b-linux.zip
 
-      # Fix Buildozer config paths ----------------------------------------
+      # -----------------------------------------------------------
+      # Patch buildozer.spec with correct SDK/NDK paths
+      # -----------------------------------------------------------
       - name: Patch buildozer.spec paths
         run: |
-          sed -i 's|# *android.sdk_path.*|android.sdk_path = /home/runner/.buildozer/android/platform/android-sdk|g' buildozer.spec
-          sed -i 's|# *android.ndk_path.*|android.ndk_path = /home/runner/.buildozer/android/platform/android-ndk-r25b|g' buildozer.spec
+          # Force correct SDK path
+          sed -i 's|#\? *android.sdk_path.*|android.sdk_path = /home/runner/.buildozer/android/platform/android-sdk|g' buildozer.spec
 
-          # Ensure sdkmanager path
-          if ! grep -q "android.sdkmanager_path" buildozer.spec; then
+          # Force correct NDK path
+          sed -i 's|#\? *android.ndk_path.*|android.ndk_path = /home/runner/.buildozer/android/platform/android-ndk-r25b|g' buildozer.spec
+
+          # Force correct sdkmanager path
+          if grep -q "android.sdkmanager_path" buildozer.spec; then
+            sed -i 's|android.sdkmanager_path.*|android.sdkmanager_path = /home/runner/.buildozer/android/platform/android-sdk/cmdline-tools/latest/bin/sdkmanager|g' buildozer.spec
+          else
             echo "android.sdkmanager_path = /home/runner/.buildozer/android/platform/android-sdk/cmdline-tools/latest/bin/sdkmanager" >> buildozer.spec
           fi
 
-      # Build -------------------------------------------------------------
+      # -----------------------------------------------------------
+      # Build APK
+      # -----------------------------------------------------------
       - name: Build APK
         env:
           ANDROIDSDK: $HOME/.buildozer/android/platform/android-sdk
@@ -76,7 +96,9 @@ jobs:
           mkdir -p build_logs
           buildozer -v android debug | tee build_logs/buildozer.log
 
-      # Upload logs -------------------------------------------------------
+      # -----------------------------------------------------------
+      # Upload build logs
+      # -----------------------------------------------------------
       - name: Upload build log
         uses: actions/upload-artifact@v4
         with:
@@ -84,11 +106,15 @@ jobs:
           path: build_logs/buildozer.log
           retention-days: 7
 
-      # APK locating -------------------------------------------------------
+      # -----------------------------------------------------------
+      # Debug APK paths
+      # -----------------------------------------------------------
       - name: Debug APK paths
-        run: find . -name "*.apk" -maxdepth 15 || true
+        run: find . -name "*.apk" -maxdepth 20 || true
 
-      # Upload APK --------------------------------------------------------
+      # -----------------------------------------------------------
+      # Upload APK
+      # -----------------------------------------------------------
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
@@ -96,4 +122,3 @@ jobs:
           path: |
             .buildozer/**/*.apk
           retention-days: 7
-
