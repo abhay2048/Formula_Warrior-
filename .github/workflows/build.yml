@@ -15,113 +15,59 @@ jobs:
       ANDROID_SDKMANAGER: $HOME/.buildozer/android/platform/android-sdk/cmdline-tools/latest/bin/sdkmanager
 
     steps:
-      # -----------------------------------------------------------
       # Checkout repository
-      # -----------------------------------------------------------
-      - name: Checkout repo
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      # -----------------------------------------------------------
       # Clear old Buildozer cache
-      # -----------------------------------------------------------
-      - name: Clear Buildozer cache
-        run: rm -rf ~/.buildozer ~/.buildozer/android/platform ~/.buildozer/cache
+      - run: rm -rf ~/.buildozer ~/.buildozer/android/platform ~/.buildozer/cache
 
-      # -----------------------------------------------------------
       # Install system dependencies
-      # -----------------------------------------------------------
-      - name: Install system deps
-        run: |
+      - run: |
           sudo apt update
-          sudo apt install -y \
-            git zip unzip openjdk-17-jdk python3-pip \
-            build-essential autoconf libtool pkg-config zlib1g-dev \
-            libncurses-dev libffi-dev libssl-dev python3-dev wget curl
+          sudo apt install -y git zip unzip openjdk-17-jdk python3-pip build-essential \
+            autoconf libtool pkg-config zlib1g-dev libncurses-dev libffi-dev libssl-dev python3-dev wget curl
 
-      # -----------------------------------------------------------
-      # Install Buildozer & Python-for-Android
-      # -----------------------------------------------------------
-      - name: Install Buildozer
-        run: |
+      # Install Buildozer & python-for-android
+      - run: |
           python3 -m pip install --upgrade pip
           pip install buildozer Cython==0.29.36 virtualenv python-for-android
 
-      # -----------------------------------------------------------
-      # Install Android SDK (modern command-line tools)
-      # -----------------------------------------------------------
-      - name: Install Android SDK
-        run: |
+      # Install Android SDK cmdline-tools
+      - run: |
           SDK=$HOME/.buildozer/android/platform/android-sdk
           mkdir -p $SDK/cmdline-tools
           wget -q https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip -O cmdline-tools.zip
           unzip -q cmdline-tools.zip -d $SDK/cmdline-tools
           mv $SDK/cmdline-tools/cmdline-tools $SDK/cmdline-tools/latest
           chmod +x $SDK/cmdline-tools/latest/bin/sdkmanager
-
-          # Accept licenses
           yes | $SDK/cmdline-tools/latest/bin/sdkmanager --licenses
+          yes | $SDK/cmdline-tools/latest/bin/sdkmanager --sdk_root=$SDK "platform-tools" "build-tools;33.0.2" "platforms;android-33"
 
-          # Install platform-tools, build-tools, and platforms
-          yes | $SDK/cmdline-tools/latest/bin/sdkmanager --sdk_root=$SDK \
-            "platform-tools" "build-tools;33.0.2" "platforms;android-33"
-
-      # -----------------------------------------------------------
       # Install Android NDK r25b
-      # -----------------------------------------------------------
-      - name: Install Android NDK r25b
-        run: |
+      - run: |
           NDK=$HOME/.buildozer/android/platform
           rm -rf $NDK/android-ndk-r25b || true
           wget -q https://dl.google.com/android/repository/android-ndk-r25b-linux.zip
           unzip -q android-ndk-r25b-linux.zip -d $NDK
           rm android-ndk-r25b-linux.zip
 
-      # -----------------------------------------------------------
-      # Patch buildozer.spec with correct paths
-      # -----------------------------------------------------------
-      - name: Patch buildozer.spec
-        run: |
+      # Patch buildozer.spec paths
+      - run: |
           sed -i 's|#\? *android.sdk_path.*|android.sdk_path = /home/runner/.buildozer/android/platform/android-sdk|g' buildozer.spec
           sed -i 's|#\? *android.ndk_path.*|android.ndk_path = /home/runner/.buildozer/android/platform/android-ndk-r25b|g' buildozer.spec
-
           if grep -q "android.sdkmanager_path" buildozer.spec; then
             sed -i 's|android.sdkmanager_path.*|android.sdkmanager_path = /home/runner/.buildozer/android/platform/android-sdk/cmdline-tools/latest/bin/sdkmanager|g' buildozer.spec
           else
             echo "android.sdkmanager_path = /home/runner/.buildozer/android/platform/android-sdk/cmdline-tools/latest/bin/sdkmanager" >> buildozer.spec
           fi
 
-      # -----------------------------------------------------------
-      # Build APK (force clean build, capture all logs)
-      # -----------------------------------------------------------
-      - name: Build APK
-        run: |
-          BUILD_LOG=$GITHUB_WORKSPACE/build_logs/buildozer.log
-          mkdir -p $(dirname "$BUILD_LOG")
-          buildozer -v android debug --clean > "$BUILD_LOG" 2>&1 || true
+      # Build APK
+      - run: buildozer android debug || true
 
-      # -----------------------------------------------------------
-      # Upload build logs
-      # -----------------------------------------------------------
-      - name: Upload build log
-        uses: actions/upload-artifact@v4
-        with:
-          name: buildozer-log
-          path: build_logs/buildozer.log
-          retention-days: 7
-
-      # -----------------------------------------------------------
-      # Debug APK paths
-      # -----------------------------------------------------------
-      - name: Debug APK paths
-        run: find . -name "*.apk" -maxdepth 20 || true
-
-      # -----------------------------------------------------------
       # Upload APK
-      # -----------------------------------------------------------
-      - name: Upload APK
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
           name: formula-warrior-apk
-          path: |
-            .buildozer/**/*.apk
+          path: .buildozer/android/platform/build
           retention-days: 7
+
