@@ -34,10 +34,16 @@ jobs:
         run: |
           SDK=$HOME/.buildozer/android/platform/android-sdk
           mkdir -p $SDK/cmdline-tools
+          
+          # Download cmdline-tools
           wget -q https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip
           unzip -q commandlinetools-linux-9477386_latest.zip -d $SDK/cmdline-tools
           mv $SDK/cmdline-tools/cmdline-tools $SDK/cmdline-tools/latest
-          
+
+          # FIX: Accept licenses
+          mkdir -p $SDK/licenses
+          echo -e "8933bad161af4178b1185d1a37fbf41ea5269c55\nd56f5187479451eabf01fb78af6dfcb131a6481e" > $SDK/licenses/android-sdk-license
+
           # Install platforms + tools
           yes | $SDK/cmdline-tools/latest/bin/sdkmanager --sdk_root=$SDK \
               "platform-tools" "build-tools;33.0.2" "platforms;android-33"
@@ -50,13 +56,13 @@ jobs:
           unzip -q android-ndk-r25b-linux.zip -d $NDK
           rm android-ndk-r25b-linux.zip
 
-      # Fix Buildozer config paths ---------------------------------------
+      # Fix Buildozer config paths ----------------------------------------
       - name: Patch buildozer.spec paths
         run: |
           sed -i 's|# *android.sdk_path.*|android.sdk_path = /home/runner/.buildozer/android/platform/android-sdk|g' buildozer.spec
           sed -i 's|# *android.ndk_path.*|android.ndk_path = /home/runner/.buildozer/android/platform/android-ndk-r25b|g' buildozer.spec
-          
-          # Add missing line if not found
+
+          # Ensure sdkmanager path
           if ! grep -q "android.sdkmanager_path" buildozer.spec; then
             echo "android.sdkmanager_path = /home/runner/.buildozer/android/platform/android-sdk/cmdline-tools/latest/bin/sdkmanager" >> buildozer.spec
           fi
@@ -90,3 +96,4 @@ jobs:
           path: |
             .buildozer/**/*.apk
           retention-days: 7
+
