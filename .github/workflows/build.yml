@@ -14,7 +14,7 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v4
 
-      # Dependencies ------------------------------------------------------
+      # System Dependencies -----------------------------------------------
       - name: Install system deps
         run: |
           sudo apt update
@@ -23,6 +23,7 @@ jobs:
             build-essential autoconf libtool pkg-config zlib1g-dev \
             libncurses-dev libffi-dev libssl-dev python3-dev wget curl
 
+      # Buildozer ----------------------------------------------------------
       - name: Install Buildozer
         run: |
           python3 -m pip install --upgrade pip
@@ -48,16 +49,17 @@ jobs:
           unzip -q android-ndk-r25b-linux.zip -d $NDK
           rm android-ndk-r25b-linux.zip
 
-      # Build -------------------------------------------------------------
+      # Build --------------------------------------------------------------
       - name: Build APK
         env:
           ANDROIDSDK: $HOME/.buildozer/android/platform/android-sdk
           ANDROIDNDK: $HOME/.buildozer/android/platform/android-ndk-r25b
         run: |
+          export PATH="$ANDROIDSDK/cmdline-tools/latest/bin:$ANDROIDSDK/platform-tools:$PATH"
           mkdir -p build_logs
           buildozer -v android debug | tee build_logs/buildozer.log
 
-      # Logs --------------------------------------------------------------
+      # Upload log ---------------------------------------------------------
       - name: Upload build log
         uses: actions/upload-artifact@v4
         with:
@@ -65,11 +67,11 @@ jobs:
           path: build_logs/buildozer.log
           retention-days: 7
 
-      # Debug APK location (optional)
+      # APK search (debug info) --------------------------------------------
       - name: Debug APK paths
-        run: find .buildozer -name "*.apk" -maxdepth 15 || true
+        run: find . -name "*.apk" -maxdepth 15 || true
 
-      # APK Upload --------------------------------------------------------
+      # Upload APK ---------------------------------------------------------
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
@@ -77,5 +79,5 @@ jobs:
           path: |
             .buildozer/android/app/build/outputs/apk/**/*.apk
             .buildozer/android/platform/**/dists/**/bin/**/*.apk
-            .buildozer/android/platform/**/outputs/**/*.apk
+            .buildozer/**/*.apk
           retention-days: 7
