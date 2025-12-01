@@ -11,7 +11,7 @@ jobs:
 
     steps:
       # -----------------------------------------------------------
-      # Checkout repo
+      # Checkout repository
       # -----------------------------------------------------------
       - name: Checkout repo
         uses: actions/checkout@v4
@@ -19,7 +19,7 @@ jobs:
       # -----------------------------------------------------------
       # Clear old Buildozer cache
       # -----------------------------------------------------------
-      - name: Clear old Buildozer cache
+      - name: Clear Buildozer cache
         run: rm -rf ~/.buildozer
 
       # -----------------------------------------------------------
@@ -43,40 +43,33 @@ jobs:
           echo "$HOME/.local/bin" >> $GITHUB_PATH
 
       # -----------------------------------------------------------
-      # Install sdkmanager separately
+      # Install Android SDK (modern command-line tools)
       # -----------------------------------------------------------
-      - name: Install sdkmanager separately
+      - name: Install Android SDK
         run: |
           SDK=$HOME/.buildozer/android/platform/android-sdk
           mkdir -p $SDK/cmdline-tools
 
-          # Download command-line tools (includes sdkmanager)
           wget -q https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip -O cmdline-tools.zip
           unzip -q cmdline-tools.zip -d $SDK/cmdline-tools
           mv $SDK/cmdline-tools/cmdline-tools $SDK/cmdline-tools/latest
 
-          # Make sdkmanager executable
           chmod +x $SDK/cmdline-tools/latest/bin/sdkmanager
 
           # Accept licenses
           yes | $SDK/cmdline-tools/latest/bin/sdkmanager --licenses
 
+          # Install platform tools, build tools, and platforms
+          yes | $SDK/cmdline-tools/latest/bin/sdkmanager --sdk_root=$SDK \
+            "platform-tools" "build-tools;33.0.2" "platforms;android-33"
+
       # -----------------------------------------------------------
       # Export SDK tools to PATH
       # -----------------------------------------------------------
-      - name: Export SDK tools to PATH
+      - name: Export Android tools to PATH
         run: |
           echo "$HOME/.buildozer/android/platform/android-sdk/cmdline-tools/latest/bin" >> $GITHUB_PATH
           echo "$HOME/.buildozer/android/platform/android-sdk/platform-tools" >> $GITHUB_PATH
-
-      # -----------------------------------------------------------
-      # Install Android SDK packages using the separate sdkmanager
-      # -----------------------------------------------------------
-      - name: Install Android SDK packages
-        run: |
-          SDK=$HOME/.buildozer/android/platform/android-sdk
-          yes | $SDK/cmdline-tools/latest/bin/sdkmanager --sdk_root=$SDK \
-            "platform-tools" "build-tools;33.0.2" "platforms;android-33"
 
       # -----------------------------------------------------------
       # Install Android NDK r25b
@@ -90,12 +83,13 @@ jobs:
           rm android-ndk-r25b-linux.zip
 
       # -----------------------------------------------------------
-      # Patch buildozer.spec with correct SDK/NDK paths
+      # Patch buildozer.spec with correct paths
       # -----------------------------------------------------------
-      - name: Patch buildozer.spec paths
+      - name: Patch buildozer.spec
         run: |
           sed -i 's|#\? *android.sdk_path.*|android.sdk_path = /home/runner/.buildozer/android/platform/android-sdk|g' buildozer.spec
           sed -i 's|#\? *android.ndk_path.*|android.ndk_path = /home/runner/.buildozer/android/platform/android-ndk-r25b|g' buildozer.spec
+
           if grep -q "android.sdkmanager_path" buildozer.spec; then
             sed -i 's|android.sdkmanager_path.*|android.sdkmanager_path = /home/runner/.buildozer/android/platform/android-sdk/cmdline-tools/latest/bin/sdkmanager|g' buildozer.spec
           else
