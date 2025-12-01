@@ -10,51 +10,46 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
+      # Checkout ----------------------------------------------------------
+      - name: Checkout repo
         uses: actions/checkout@v4
 
-      - name: Install system dependencies
+      # Dependencies ------------------------------------------------------
+      - name: Install system deps
         run: |
           sudo apt update
-          sudo apt install -y git zip unzip openjdk-17-jdk python3-pip \
-              build-essential autoconf libtool pkg-config zlib1g-dev \
-              libncurses6 libncurses-dev libtinfo6 libffi-dev libssl-dev \
-              python3-dev wget curl
+          sudo apt install -y \
+            git zip unzip openjdk-17-jdk python3-pip \
+            build-essential autoconf libtool pkg-config zlib1g-dev \
+            libncurses-dev libffi-dev libssl-dev python3-dev wget curl
 
-      - name: Install Buildozer & Python tools
+      - name: Install Buildozer
         run: |
           python3 -m pip install --upgrade pip
-          python3 -m pip install --user buildozer Cython==0.29.36 virtualenv
+          pip install buildozer Cython==0.29.36 virtualenv
           echo "$HOME/.local/bin" >> $GITHUB_PATH
 
-      - name: Clean previous build
-        run: rm -rf .buildozer
-
-      - name: Install Android SDK command-line tools
+      # Android SDK -------------------------------------------------------
+      - name: Install Android SDK
         run: |
-          SDK_ROOT=$HOME/.buildozer/android/platform/android-sdk
-          mkdir -p $SDK_ROOT/cmdline-tools
-          cd $SDK_ROOT/cmdline-tools
-          wget https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip
-          unzip -q *.zip
-          mv cmdline-tools latest
-          ln -s $SDK_ROOT/cmdline-tools/latest $SDK_ROOT/tools
-          yes | $SDK_ROOT/tools/bin/sdkmanager --sdk_root=$SDK_ROOT \
-            "platform-tools" "build-tools;33.0.2" "platforms;android-33"
+          SDK=$HOME/.buildozer/android/platform/android-sdk
+          mkdir -p $SDK/cmdline-tools
+          wget -q https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip
+          unzip -q commandlinetools-linux-9477386_latest.zip -d $SDK/cmdline-tools
+          mv $SDK/cmdline-tools/cmdline-tools $SDK/cmdline-tools/latest
+          yes | $SDK/cmdline-tools/latest/bin/sdkmanager --sdk_root=$SDK \
+              "platform-tools" "build-tools;33.0.2" "platforms;android-33"
 
+      # Android NDK -------------------------------------------------------
       - name: Install Android NDK r25b
         run: |
-          NDK_URL="https://dl.google.com/android/repository/android-ndk-r25b-linux.zip"
-          NDK_DIR=$HOME/.buildozer/android/platform
-          mkdir -p $NDK_DIR
-          wget -q $NDK_URL -O android-ndk-r25b-linux.zip
-          unzip -q android-ndk-r25b-linux.zip -d $NDK_DIR
+          NDK=$HOME/.buildozer/android/platform
+          wget -q https://dl.google.com/android/repository/android-ndk-r25b-linux.zip
+          unzip -q android-ndk-r25b-linux.zip -d $NDK
           rm android-ndk-r25b-linux.zip
 
-      - name: Verify Buildozer
-        run: buildozer --version
-
-      - name: Build APK and capture log
+      # Build -------------------------------------------------------------
+      - name: Build APK
         env:
           ANDROIDSDK: $HOME/.buildozer/android/platform/android-sdk
           ANDROIDNDK: $HOME/.buildozer/android/platform/android-ndk-r25b
@@ -62,18 +57,25 @@ jobs:
           mkdir -p build_logs
           buildozer -v android debug | tee build_logs/buildozer.log
 
-      - name: Upload build log artifact
+      # Logs --------------------------------------------------------------
+      - name: Upload build log
         uses: actions/upload-artifact@v4
         with:
           name: buildozer-log
           path: build_logs/buildozer.log
           retention-days: 7
 
-      - name: Upload APK artifact (search all possible locations)
+      # Debug APK location (optional)
+      - name: Debug APK paths
+        run: find .buildozer -name "*.apk" -maxdepth 15 || true
+
+      # APK Upload --------------------------------------------------------
+      - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: formula-warrior-apk
           path: |
-            .buildozer/android/platform/build-*/bin/**/*.apk
-            .buildozer/android/platform/build-*/outputs/**/*.apk
+            .buildozer/android/app/build/outputs/apk/**/*.apk
+            .buildozer/android/platform/**/dists/**/bin/**/*.apk
+            .buildozer/android/platform/**/outputs/**/*.apk
           retention-days: 7
